@@ -1,0 +1,120 @@
+DoomClimb — AI Climb Generator Training Pipeline
+==================================================
+
+This trains a small GPT model to generate Kilter Board climbing routes.
+Run each step in order. Each script prints what it's doing and what to
+look at before moving to the next step.
+
+
+SETUP
+-----
+cd /Users/maxwellwainwright/Documents/DoomClimb/training
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+
+STEP 1 — Explore the data
+--------------------------
+python 01_explore_data.py
+
+What to look at:
+  • Quality distribution — helps you decide the MIN_QUALITY cutoff
+  • Difficulty distribution — see how many climbs per V-grade
+  • Holds-per-climb — tells you typical sequence lengths
+  • Sample frames — see the raw format you're training on
+
+Nothing is saved here, it's just for understanding the data.
+
+
+STEP 2 — Build the dataset
+---------------------------
+python 02_build_dataset.py
+
+What to look at:
+  • data/dataset_stats.json — total sequences, vocab size, sequence lengths
+  • data/vocab.json — the full token vocabulary (open it, scroll through)
+  • The printed sample sequences — make sure grade/angle/holds look right
+
+Things you can tweak (at the top of the file):
+  • MIN_ASCENTS — raise to only train on well-tested climbs
+  • MIN_QUALITY — raise to only train on highly-rated climbs
+  • MIN_HOLDS / MAX_HOLDS — filter out trivially short or suspiciously long climbs
+
+
+STEP 3 — Train the model
+-------------------------
+python 03_train_model.py
+
+This takes ~10-20 minutes on an M1/M2 Mac (MPS backend).
+Watch the train/val loss — it should decrease steadily.
+A ★ appears when validation loss hits a new best.
+
+What to look at:
+  • Is val_loss still decreasing at the end? → increase NUM_EPOCHS
+  • Is val_loss going up while train_loss goes down? → overfitting, reduce epochs or increase dropout
+  • Is training super slow? → reduce BATCH_SIZE or NUM_LAYERS
+
+Things you can tweak:
+  • NUM_EPOCHS — more = better quality, but diminishing returns past ~50
+  • EMBED_DIM — 128 (smaller/faster) to 512 (bigger/smarter)
+  • NUM_LAYERS — 2 (fast) to 8 (powerful)
+  • LEARNING_RATE — 1e-4 to 5e-4 is the sweet spot
+  • TEMPERATURE (at generation time, not training)
+
+Saved to:
+  • checkpoints/climb_gpt_best.pt — best model (lowest val loss)
+  • checkpoints/climb_gpt_final.pt — last epoch model
+  • checkpoints/config.json — model architecture config
+
+
+STEP 4 — Generate samples and inspect
+--------------------------------------
+python 04_generate_samples.py
+
+This generates climbs at various grades and angles. Read through them.
+Look for:
+  • Do climbs have starts at bottom and finish at top?
+  • Do harder grades have more holds / wider spreads?
+  • Are there weird duplicates or missing roles?
+  • What % of generations are "valid"?
+
+Things you can tweak (at the top of the file):
+  • TEMPERATURE — 0.7 (safe/boring) to 1.3 (creative/risky)
+  • TOP_K — 20 (conservative) to 100 (diverse)
+
+If quality is bad: go back to Step 3 and train longer, or go back to
+Step 2 and increase MIN_QUALITY / MIN_ASCENTS for cleaner data.
+
+
+STEP 5 — Export to CoreML
+--------------------------
+python 05_export_coreml.py
+
+Requires: pip install coremltools
+
+Saves to:
+  • export/ClimbGPT.mlpackage — drag this into Xcode
+  • export/vocab.json — bundle in the app
+  • export/id_to_token.json — bundle in the app
+
+After this, we'll write the Swift CoreMLRouteGenerator service
+that loads the model and runs the generation loop on-device.
+
+
+TROUBLESHOOTING
+---------------
+"No module named torch"
+  → Make sure you activated the venv: source venv/bin/activate
+
+"kilter.db not found"
+  → The scripts expect kilter.db at /Users/maxwellwainwright/Documents/DoomClimb/kilter.db
+
+"MPS not available"
+  → You need macOS 12.3+ and PyTorch 2.0+. Falls back to CPU (slower but works).
+
+Training loss not decreasing
+  → Try lower learning rate (1e-4) or check dataset isn't empty
+
+CoreML conversion fails
+  → Make sure coremltools is up to date: pip install -U coremltools

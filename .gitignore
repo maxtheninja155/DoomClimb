@@ -60,3 +60,11 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Kilter Board database (189 MB — exceeds GitHub's 100 MB limit)
+# Regenerate via download_kilter_db.py, then drag into Xcode.
+kilter.db
+
+# Claude Code local settings
+.claude/
+

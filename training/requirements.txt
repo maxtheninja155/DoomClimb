@@ -1,0 +1,6 @@
+# Core training
+torch>=2.0
+numpy
+
+# CoreML export (Step 5 only)
+coremltools>=7.0

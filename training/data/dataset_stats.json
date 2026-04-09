@@ -1,0 +1,17 @@
+{
+  "total_climbs_extracted": 66138,
+  "total_sequences": 66138,
+  "train_size": 59525,
+  "val_size": 6613,
+  "vocab_size": 555,
+  "unique_holds": 515,
+  "min_seq_length": 10,
+  "max_seq_length": 64,
+  "avg_seq_length": 28.7,
+  "config": {
+    "min_ascents": 5,
+    "min_quality": 1.5,
+    "min_holds": 4,
+    "max_holds": 30
+  }
+}
