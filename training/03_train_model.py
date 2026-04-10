@@ -47,8 +47,16 @@ MAX_SEQ_LEN  = 80       # Maximum sequence length (longest climbs ~60 tokens)
 
 BATCH_SIZE   = 64       # Batch size
 LEARNING_RATE = 3e-4    # Adam learning rate
-NUM_EPOCHS   = 30       # Training epochs (start here, increase if loss is still dropping)
+MAX_EPOCHS   = 100      # Upper bound — early stopping will cut this short
 WARMUP_STEPS = 500      # Linear LR warmup steps
+PATIENCE     = 10       # Stop if val loss doesn't improve for this many epochs
+LABEL_SMOOTH = 0.1      # Label smoothing (reduces overconfidence, improves generalization)
+
+# Classifier-Free Guidance: probability of dropping condition tokens during training.
+# When dropped, GRADE and ANGLE tokens are replaced with UNCOND, forcing the model
+# to learn both conditional and unconditional generation. At inference time, we
+# interpolate between the two to steer harder toward the target grade/angle.
+CFG_DROP_PROB = 0.10    # 10% of training batches use unconditional input
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
@@ -84,9 +92,10 @@ class ClimbGPT(nn.Module):
     """
 
     def __init__(self, vocab_size, embed_dim, num_heads, num_layers,
-                 max_seq_len, dropout=0.1, pad_token_id=0):
+                 max_seq_len, dropout=0.1, pad_token_id=0, label_smoothing=0.0):
         super().__init__()
         self.vocab_size = vocab_size
+        self.label_smoothing = label_smoothing
         self.embed_dim = embed_dim
         self.max_seq_len = max_seq_len
         self.pad_token_id = pad_token_id
@@ -161,6 +170,7 @@ class ClimbGPT(nn.Module):
                 logits.view(-1, self.vocab_size),
                 targets.view(-1),
                 ignore_index=self.pad_token_id,
+                label_smoothing=self.label_smoothing,
             )
 
         return logits, loss
@@ -252,9 +262,12 @@ def train():
         vocab = json.load(f)
 
     vocab_size = len(vocab)
+    uncond_token = vocab.get('UNCOND')
+    assert uncond_token is not None, "UNCOND token not found in vocab — rebuild dataset with 02_build_dataset.py"
     print(f"Vocab size: {vocab_size}")
     print(f"Train: {len(train_seqs):,} sequences")
     print(f"Val:   {len(val_seqs):,} sequences")
+    print(f"CFG dropout: {CFG_DROP_PROB:.0%} (UNCOND token = {uncond_token})")
 
     train_ds = ClimbDataset(train_seqs, MAX_SEQ_LEN)
     val_ds   = ClimbDataset(val_seqs, MAX_SEQ_LEN)
@@ -272,6 +285,7 @@ def train():
         num_layers=NUM_LAYERS,
         max_seq_len=MAX_SEQ_LEN,
         dropout=DROPOUT,
+        label_smoothing=LABEL_SMOOTH,
     ).to(DEVICE)
 
     num_params = sum(p.numel() for p in model.parameters())
@@ -279,11 +293,13 @@ def train():
     print(f"Model size: ~{num_params * 4 / 1024 / 1024:.1f} MB (float32)")
 
     # ── Optimizer + scheduler ────────────────────────────────────────────
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE,
-                                   weight_decay=0.01)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=LEARNING_RATE,
+        weight_decay=0.1, betas=(0.9, 0.95),
+    )
 
     # Cosine annealing with warmup
-    total_steps = len(train_loader) * NUM_EPOCHS
+    total_steps = len(train_loader) * MAX_EPOCHS
 
     def lr_lambda(step):
         if step < WARMUP_STEPS:
@@ -295,13 +311,15 @@ def train():
 
     # ── Training ─────────────────────────────────────────────────────────
     print(f"\n{'='*60}")
-    print(f"Training for {NUM_EPOCHS} epochs ({total_steps:,} steps)")
+    print(f"Training for up to {MAX_EPOCHS} epochs (early stop patience={PATIENCE})")
     print(f"{'='*60}\n")
 
     best_val_loss = float('inf')
+    epochs_without_improvement = 0
     global_step = 0
+    actual_epochs = 0
 
-    for epoch in range(1, NUM_EPOCHS + 1):
+    for epoch in range(1, MAX_EPOCHS + 1):
         model.train()
         epoch_loss = 0
         epoch_tokens = 0
@@ -309,6 +327,17 @@ def train():
 
         for batch_idx, (inp, tgt) in enumerate(train_loader):
             inp, tgt = inp.to(DEVICE), tgt.to(DEVICE)
+
+            # ── CFG dropout: replace GRADE+ANGLE with UNCOND ────────
+            # Sequence format: [BOS, GRADE, ANGLE, holds..., EOS, PAD...]
+            # In the input tensor (shifted for causal LM), position 0 = BOS,
+            # position 1 = GRADE, position 2 = ANGLE.
+            # For each sample, independently drop with probability CFG_DROP_PROB.
+            if CFG_DROP_PROB > 0:
+                drop_mask = torch.rand(inp.size(0), device=inp.device) < CFG_DROP_PROB
+                if drop_mask.any():
+                    inp[drop_mask, 1] = uncond_token  # GRADE → UNCOND
+                    inp[drop_mask, 2] = uncond_token  # ANGLE → UNCOND
 
             _, loss = model(inp, tgt)
             optimizer.zero_grad()
@@ -348,15 +377,28 @@ def train():
         improved = ""
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
+            epochs_without_improvement = 0
             # Save best model
             torch.save(model.state_dict(), os.path.join(CKPT_DIR, "climb_gpt_best.pt"))
             improved = " ★ best"
+        else:
+            epochs_without_improvement += 1
 
-        print(f"Epoch {epoch:3d}/{NUM_EPOCHS} | "
+        actual_epochs = epoch
+
+        print(f"Epoch {epoch:3d}/{MAX_EPOCHS} | "
               f"train_loss: {avg_train_loss:.4f} | "
               f"val_loss: {avg_val_loss:.4f} | "
               f"lr: {lr:.6f} | "
-              f"time: {dt:.1f}s{improved}")
+              f"time: {dt:.1f}s{improved}"
+              + (f" (patience {epochs_without_improvement}/{PATIENCE})"
+                 if epochs_without_improvement > 0 else ""))
+
+        # Early stopping
+        if epochs_without_improvement >= PATIENCE:
+            print(f"\n⏹  Early stopping at epoch {epoch} — "
+                  f"val loss hasn't improved in {PATIENCE} epochs")
+            break
 
     # ── Save final model + config ────────────────────────────────────────
     torch.save(model.state_dict(), os.path.join(CKPT_DIR, "climb_gpt_final.pt"))
@@ -368,9 +410,11 @@ def train():
         "num_layers": NUM_LAYERS,
         "max_seq_len": MAX_SEQ_LEN,
         "dropout": DROPOUT,
+        "label_smoothing": LABEL_SMOOTH,
+        "cfg_drop_prob": CFG_DROP_PROB,
         "num_params": num_params,
         "best_val_loss": best_val_loss,
-        "epochs_trained": NUM_EPOCHS,
+        "epochs_trained": actual_epochs,
     }
     with open(os.path.join(CKPT_DIR, "config.json"), "w") as f:
         json.dump(config, f, indent=2)

@@ -14,23 +14,23 @@ final class CoreMLRouteGenerator {
     private static let BOS   = 1
     private static let EOS   = 2
 
-    // Grade tokens:  GRADE_0 = 4, GRADE_1 = 5, ..., GRADE_16 = 20
-    private static func gradeToken(for grade: Int) -> Int { 4 + min(max(grade, 0), 16) }
+    // Grade tokens:  GRADE_0 = 5, GRADE_1 = 6, ..., GRADE_16 = 21
+    private static func gradeToken(for grade: Int) -> Int { 5 + min(max(grade, 0), 16) }
 
-    // Angle tokens:  ANGLE_0 = 21, ANGLE_5 = 22, ..., ANGLE_70 = 35
+    // Angle tokens:  ANGLE_0 = 22, ANGLE_5 = 23, ..., ANGLE_70 = 36
     private static let validAngles = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
     private static func angleToken(for angle: Int) -> Int? {
         let snapped = validAngles.min(by: { abs($0 - angle) < abs($1 - angle) }) ?? 40
         guard let idx = validAngles.firstIndex(of: snapped) else { return nil }
-        return 21 + idx
+        return 22 + idx
     }
 
     // Role tokens
     private static let roleTokenToHoldRole: [Int: HoldRole] = [
-        36: .start,     // ROLE_12
-        37: .middle,    // ROLE_13
-        38: .finish,    // ROLE_14
-        39: .footOnly,  // ROLE_15
+        37: .start,     // ROLE_12
+        38: .middle,    // ROLE_13
+        39: .finish,    // ROLE_14
+        40: .footOnly,  // ROLE_15
     ]
 
     // MARK: - Properties
@@ -46,7 +46,7 @@ final class CoreMLRouteGenerator {
     private let kickboardHoldTokens: Set<Int>
 
     /// Minimum token ID that represents a hold (everything >= this is a HOLD_* token)
-    private let holdTokenStart = 40
+    private let holdTokenStart = 41
 
     /// Y threshold for kickboard zone — holds below this line (i.e. with
     /// y > this value) should never be hand/start holds. The 12×12 with
@@ -55,13 +55,22 @@ final class CoreMLRouteGenerator {
     private static let kickboardY: Double = 0.94
 
     /// Role token ID for START
-    private static let startRoleToken = 36
+    private static let startRoleToken = 37
 
     // MARK: - Init
 
     init?() {
         // Load the CoreML model
-        guard let mlModel = try? ClimbGPT(configuration: .init()) else {
+        // Use CPU-only on the simulator (no real GPU → MPS backend produces garbage).
+        // On device, let CoreML pick the best backend (Neural Engine / GPU / CPU).
+        let config = MLModelConfiguration()
+        #if targetEnvironment(simulator)
+        config.computeUnits = .cpuOnly
+        print("CoreMLGen ℹ️  Simulator detected — forcing CPU-only compute")
+        #else
+        config.computeUnits = .all
+        #endif
+        guard let mlModel = try? ClimbGPT(configuration: config) else {
             print("CoreMLGen ❌  Failed to load ClimbGPT.mlpackage")
             return nil
         }
@@ -99,7 +108,7 @@ final class CoreMLRouteGenerator {
         // Read model shape from first prediction
         // maxSeqLen is the second dimension of the input "tokens" tensor
         self.maxSeqLen = 80  // Must match training config
-        self.vocabSize = 555 // Must match training config
+        self.vocabSize = 517 // Must match training config
 
         print("CoreMLGen ✅  Loaded — \(mapping.count) hold tokens (\(kbTokens.count) kickboard), maxSeqLen=\(maxSeqLen)")
     }

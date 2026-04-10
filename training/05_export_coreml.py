@@ -100,7 +100,7 @@ def main():
     # ── Trace with example inputs ────────────────────────────────────────
     print("Tracing model...")
     example_tokens = torch.zeros(1, max_seq_len, dtype=torch.long)
-    example_tokens[0, :3] = torch.tensor([1, 8, 29])  # BOS, GRADE_4, ANGLE_40
+    example_tokens[0, :3] = torch.tensor([1, 9, 30])  # BOS, GRADE_4, ANGLE_40
 
     # check_trace=False: TransformerEncoder takes different optimized code
     # paths on repeated calls, which causes the graph diff check to fail.

@@ -1,0 +1,65 @@
+{
+  "config": {
+    "samples_per_combo": 20,
+    "temperature": 0.9,
+    "top_k": 40,
+    "eval_grades": [
+      0,
+      2,
+      4,
+      6,
+      8,
+      10
+    ],
+    "eval_angles": [
+      20,
+      40,
+      60
+    ],
+    "max_reach": 0.317884
+  },
+  "model": {
+    "num_params": 3312384,
+    "best_val_loss": 2.0520256324684127,
+    "epochs_trained": 100
+  },
+  "summary": {
+    "total_generated": 360,
+    "structural_ok_pct": 97.5,
+    "climbable_pct": 95.8,
+    "avg_holds": 13.1
+  },
+  "per_grade": {
+    "V0": {
+      "climbable_pct": 100.0,
+      "avg_holds": 14.8,
+      "diversity": 0.925
+    },
+    "V2": {
+      "climbable_pct": 98.3,
+      "avg_holds": 14.6,
+      "diversity": 0.954
+    },
+    "V4": {
+      "climbable_pct": 96.7,
+      "avg_holds": 13.1,
+      "diversity": 0.969
+    },
+    "V6": {
+      "climbable_pct": 95.0,
+      "avg_holds": 13.1,
+      "diversity": 0.975
+    },
+    "V8": {
+      "climbable_pct": 93.3,
+      "avg_holds": 11.9,
+      "diversity": 0.971
+    },
+    "V10": {
+      "climbable_pct": 91.7,
+      "avg_holds": 11.1,
+      "diversity": 0.973
+    }
+  },
+  "generation_time_sec": 21.2
+}
