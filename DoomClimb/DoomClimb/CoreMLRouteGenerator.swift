@@ -10,9 +10,10 @@ final class CoreMLRouteGenerator {
 
     // MARK: - Token constants (must match training vocab)
 
-    private static let PAD   = 0
-    private static let BOS   = 1
-    private static let EOS   = 2
+    private static let PAD    = 0
+    private static let BOS    = 1
+    private static let EOS    = 2
+    private static let UNCOND = 4   // Unconditional token for CFG (replaces GRADE+ANGLE)
 
     // Grade tokens:  GRADE_0 = 5, GRADE_1 = 6, ..., GRADE_16 = 21
     private static func gradeToken(for grade: Int) -> Int { 5 + min(max(grade, 0), 16) }
@@ -115,31 +116,84 @@ final class CoreMLRouteGenerator {
 
     // MARK: - Generation
 
-    func generate(grade: Int, angle: Int, temperature: Float = 0.9, topK: Int = 40) -> BoulderRoute? {
+    /// Maximum number of generation attempts before giving up.
+    private static let maxRetries = 5
+
+    /// Classifier-Free Guidance scale. 1.0 = no guidance (original behavior).
+    /// Higher values push the model harder toward the target grade/angle.
+    /// 2.0–3.0 is a good range for tighter grade accuracy.
+    func generate(grade: Int, angle: Int, temperature: Float = 0.9, topK: Int = 40,
+                  guidanceScale: Float = 2.0) -> BoulderRoute? {
+        for attempt in 1...Self.maxRetries {
+            guard let route = generateOnce(grade: grade, angle: angle, temperature: temperature,
+                                           topK: topK, guidanceScale: guidanceScale) else {
+                continue
+            }
+
+            if ClimbabilityValidator.isClimbable(route.holds) {
+                if attempt > 1 {
+                    print("CoreMLGen \u{2705}  Climbable on attempt \(attempt)")
+                }
+                return route
+            }
+
+            print("CoreMLGen \u{26A0}\u{FE0F}  Attempt \(attempt)/\(Self.maxRetries) failed climbability check, retrying...")
+        }
+
+        print("CoreMLGen \u{274C}  All \(Self.maxRetries) attempts failed climbability validation")
+        return nil
+    }
+
+    private func generateOnce(grade: Int, angle: Int, temperature: Float, topK: Int,
+                              guidanceScale: Float) -> BoulderRoute? {
 
         guard let angleTok = Self.angleToken(for: angle) else { return nil }
         let gradeTok = Self.gradeToken(for: grade)
 
-        // Start with [BOS, GRADE, ANGLE, PAD, PAD, ...]
-        var tokens = [Int](repeating: Self.PAD, count: maxSeqLen)
-        tokens[0] = Self.BOS
-        tokens[1] = gradeTok
-        tokens[2] = angleTok
+        // Conditional prefix: [BOS, GRADE, ANGLE, PAD, PAD, ...]
+        var condTokens = [Int](repeating: Self.PAD, count: maxSeqLen)
+        condTokens[0] = Self.BOS
+        condTokens[1] = gradeTok
+        condTokens[2] = angleTok
+
+        // Unconditional prefix: [BOS, UNCOND, UNCOND, PAD, PAD, ...]
+        // Only used when guidanceScale > 1.0
+        let useCFG = guidanceScale > 1.0
+        var uncondTokens: [Int]?
+        if useCFG {
+            var u = [Int](repeating: Self.PAD, count: maxSeqLen)
+            u[0] = Self.BOS
+            u[1] = Self.UNCOND
+            u[2] = Self.UNCOND
+            uncondTokens = u
+        }
+
         var length = 3
 
         // Autoregressive generation loop
         for _ in 0..<(maxSeqLen - 3) {
-            // Predict
-            guard let logitsArray = predict(tokens: tokens) else { return nil }
-
-            // Get logits at position (length - 1)
+            // Conditional forward pass
+            guard let condLogitsArray = predict(tokens: condTokens) else { return nil }
             let offset = (length - 1) * vocabSize
-            var logits = Array(logitsArray[offset..<(offset + vocabSize)])
+            var logits: [Float]
 
-            // Suppress START role after kickboard holds.
-            // If the last token was a kickboard HOLD, the model is about to
-            // pick a ROLE — prevent it from choosing START (token 36).
-            let lastToken = tokens[length - 1]
+            if useCFG, let uncondToks = uncondTokens {
+                // Unconditional forward pass
+                guard let uncondLogitsArray = predict(tokens: uncondToks) else { return nil }
+
+                // CFG: uncond + scale * (cond - uncond)
+                logits = [Float](repeating: 0, count: vocabSize)
+                for i in 0..<vocabSize {
+                    let c = condLogitsArray[offset + i]
+                    let u = uncondLogitsArray[offset + i]
+                    logits[i] = u + guidanceScale * (c - u)
+                }
+            } else {
+                logits = Array(condLogitsArray[offset..<(offset + vocabSize)])
+            }
+
+            // Suppress START role after kickboard holds
+            let lastToken = condTokens[length - 1]
             if kickboardHoldTokens.contains(lastToken) {
                 logits[Self.startRoleToken] = -Float.infinity
             }
@@ -157,9 +211,10 @@ final class CoreMLRouteGenerator {
             // Stop at EOS
             if nextToken == Self.EOS { break }
 
-            // Append token
+            // Append token to both sequences
             if length < maxSeqLen {
-                tokens[length] = nextToken
+                condTokens[length] = nextToken
+                uncondTokens?[length] = nextToken
                 length += 1
             } else {
                 break
@@ -167,7 +222,7 @@ final class CoreMLRouteGenerator {
         }
 
         // Decode tokens into RouteHolds
-        return decodeRoute(tokens: Array(tokens[0..<length]), grade: grade, angle: angle)
+        return decodeRoute(tokens: Array(condTokens[0..<length]), grade: grade, angle: angle)
     }
 
     // MARK: - CoreML Prediction
