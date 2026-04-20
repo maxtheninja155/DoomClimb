@@ -23,6 +23,12 @@ struct ClimbDetailView: View {
     @State private var isEditing: Bool = false
     @State private var didApplyStartInEditMode = false
 
+    // Share sheet
+    @State private var showShareSheet = false
+
+    // Celebration trigger — increment to replay the send-flash effect.
+    @State private var sendFlashTrigger: Int = 0
+
     /// Look the climb up fresh every render so name/favorite/route changes
     /// reflect immediately even after the store mutates.
     private var climb: SavedClimb? {
@@ -60,6 +66,8 @@ struct ClimbDetailView: View {
                     if isEditing {
                         editorHint
                     }
+
+                    sendTracker(climb)
 
                     // Send to Board (only when BLE connected)
                     if vm.ble.state.isConnected {
@@ -121,6 +129,13 @@ struct ClimbDetailView: View {
         } message: {
             Text("Enter a custom name for this climb. Reset clears it back to the default.")
         }
+        .sendFlash(trigger: $sendFlashTrigger)
+        .sheet(isPresented: $showShareSheet) {
+            if let climb = climb {
+                ShareRouteSheet(route: climb.route)
+                    .presentationDetents([.large])
+            }
+        }
         .toolbar {
             // Edit mode toggle
             if climb != nil {
@@ -146,6 +161,18 @@ struct ClimbDetailView: View {
                     } label: {
                         Image(systemName: climb.isFavorite ? "star.fill" : "star")
                             .foregroundStyle(climb.isFavorite ? .yellow : .primary)
+                    }
+                }
+            }
+
+            // Share
+            if climb != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.indigo)
                     }
                 }
             }
@@ -204,6 +231,101 @@ struct ClimbDetailView: View {
         .padding(.vertical, 4)
         .background(color.opacity(0.12), in: Capsule())
         .foregroundStyle(color)
+    }
+
+    // MARK: - Send Tracker
+
+    @ViewBuilder
+    private func sendTracker(_ climb: SavedClimb) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Send Tracker", systemImage: "checkmark.seal")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                Spacer()
+                if climb.isSent, let sentAt = climb.sentAt {
+                    Text("Sent \(sentAt.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.caption2)
+                        .foregroundStyle(.green)
+                }
+            }
+
+            HStack(spacing: 10) {
+                statPill(label: "Attempts", value: "\(climb.attempts)", color: .cyan)
+                statPill(
+                    label: "Status",
+                    value: climb.isSent ? "Sent" : "Project",
+                    color: climb.isSent ? .green : .orange
+                )
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        vm.store.logAttempt(id: climb.id)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Log Attempt")
+                    }
+                    .font(.system(.footnote, design: .rounded, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.cyan)
+
+                Button {
+                    let wasSent = climb.isSent
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                        if wasSent {
+                            vm.store.unmarkSent(id: climb.id)
+                        } else {
+                            vm.store.markSent(id: climb.id)
+                        }
+                    }
+                    if !wasSent {
+                        sendFlashTrigger &+= 1
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: climb.isSent ? "checkmark.seal.fill" : "checkmark.seal")
+                        Text(climb.isSent ? "Unmark Sent" : "Mark Sent")
+                    }
+                    .font(.system(.footnote, design: .rounded, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+            }
+
+            if climb.attempts > 0 {
+                Button("Undo last attempt", role: .destructive) {
+                    withAnimation {
+                        vm.store.undoAttempt(id: climb.id)
+                    }
+                }
+                .font(.caption2)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func statPill(label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(.subheadline, design: .rounded, weight: .bold))
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Editor hint

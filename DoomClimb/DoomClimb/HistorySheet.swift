@@ -5,10 +5,18 @@ import SwiftUI
 // segmented filter. Each row can be swiped to delete, favorited in place,
 // or tapped to push a detail view.
 
+enum HistoryFilter: String, CaseIterable, Identifiable {
+    case all       = "All"
+    case favorites = "★"
+    case sends     = "✓"
+
+    var id: String { rawValue }
+}
+
 struct HistorySheet: View {
     @ObservedObject var vm: RouteViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var showFavoritesOnly = false
+    @State private var filter: HistoryFilter = .all
 
     var body: some View {
         NavigationStack {
@@ -26,9 +34,10 @@ struct HistorySheet: View {
                     Button("Done") { dismiss() }
                 }
                 ToolbarItem(placement: .principal) {
-                    Picker("Filter", selection: $showFavoritesOnly) {
-                        Text("All").tag(false)
-                        Text("★ Favorites").tag(true)
+                    Picker("Filter", selection: $filter) {
+                        ForEach(HistoryFilter.allCases) { f in
+                            Text(f.rawValue).tag(f)
+                        }
                     }
                     .pickerStyle(.segmented)
                     .frame(maxWidth: 220)
@@ -45,21 +54,43 @@ struct HistorySheet: View {
     @ViewBuilder
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: showFavoritesOnly ? "star.slash" : "tray")
+            Image(systemName: emptyStateIcon)
                 .font(.system(size: 42))
                 .foregroundStyle(.secondary)
-            Text(showFavoritesOnly ? "No favorites yet" : "No climbs in history")
+            Text(emptyStateTitle)
                 .font(.headline)
                 .foregroundStyle(.secondary)
-            Text(showFavoritesOnly
-                 ? "Tap the star on any climb to save it here."
-                 : "Generate a route to start your history.")
+            Text(emptyStateHint)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var emptyStateIcon: String {
+        switch filter {
+        case .all:       return "tray"
+        case .favorites: return "star.slash"
+        case .sends:     return "checkmark.seal"
+        }
+    }
+
+    private var emptyStateTitle: String {
+        switch filter {
+        case .all:       return "No climbs in history"
+        case .favorites: return "No favorites yet"
+        case .sends:     return "No sends yet"
+        }
+    }
+
+    private var emptyStateHint: String {
+        switch filter {
+        case .all:       return "Generate a route to start your history."
+        case .favorites: return "Tap the star on any climb to save it here."
+        case .sends:     return "Mark a climb as sent from its detail page."
+        }
     }
 
     @ViewBuilder
@@ -97,11 +128,14 @@ struct HistorySheet: View {
 
     // MARK: - Data helpers
 
-    /// Day-groups filtered by the current All/Favorites toggle.
+    /// Day-groups filtered by the current All/Favorites/Sends toggle.
     private var filteredGroups: [(day: Date, climbs: [SavedClimb])] {
-        let source: [SavedClimb] = showFavoritesOnly
-            ? vm.store.history.filter(\.isFavorite)
-            : vm.store.history
+        let source: [SavedClimb]
+        switch filter {
+        case .all:       source = vm.store.history
+        case .favorites: source = vm.store.history.filter(\.isFavorite)
+        case .sends:     source = vm.store.history.filter(\.isSent)
+        }
 
         let cal = Calendar.current
         let groups = Dictionary(grouping: source) { cal.startOfDay(for: $0.savedAt) }
@@ -140,10 +174,18 @@ private struct HistoryRow: View {
                 .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(vm.store.displayName(for: climb))
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(vm.store.displayName(for: climb))
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    if climb.isSent {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
+                }
 
                 HStack(spacing: 6) {
                     Text(climb.route.grade)
@@ -151,6 +193,10 @@ private struct HistoryRow: View {
                     Text("\(climb.route.angle)°")
                     Text("•")
                     Text("\(climb.route.moveCount) moves")
+                    if climb.attempts > 0 {
+                        Text("•")
+                        Text("\(climb.attempts) att")
+                    }
                     Text("•")
                     Text(timeString(climb.savedAt))
                 }

@@ -28,6 +28,11 @@ class RouteViewModel: ObservableObject {
         return store.history.first(where: { $0.id == id })?.route
     }
 
+    // MARK: - Session planning
+    /// Ordered list of climbs making up the currently planned session.
+    /// Empty when no session is active.
+    @Published var session: [SessionEntry] = []
+
     // MARK: - Bluetooth
     let ble = KilterBoardBLE()
     @Published var selectedBoardSize: LEDMappingService.BoardSize = .square12x12
@@ -302,6 +307,62 @@ class RouteViewModel: ObservableObject {
             if ledSendStatus?.starts(with: "Sent") == true {
                 ledSendStatus = nil
             }
+        }
+    }
+
+    // MARK: - Session Planner
+
+    /// Build a full session by generating one climb per slot defined by
+    /// `type.structure`. Each slot's grade is `baseGrade + offset`, clamped
+    /// to V0–V16. Pulls real Kilter climbs when available so the user gets
+    /// known-good routes for their warm-ups and base grade.
+    func generateSession(type: SessionType, baseGrade: Int, angle: Int) async {
+        clearSession()
+
+        var entries: [SessionEntry] = []
+        for slot in type.structure {
+            let grade = max(0, min(16, baseGrade + slot.gradeOffset))
+
+            var route: BoulderRoute? = database?.fetchRandomClimb(grade: grade, angle: angle)
+
+            if route == nil {
+                route = coreMLGenerator?.generate(grade: grade, angle: angle)
+            }
+
+            if route == nil {
+                route = await mockGenerator.generate(
+                    board: board,
+                    grade: grade,
+                    angle: angle,
+                    technique: selectedTechnique
+                )
+            }
+
+            guard let r = route else { continue }
+            let filtered = filterHoldsForBoardSize(r)
+            let saved = store.append(filtered)
+            entries.append(SessionEntry(climbId: saved.id, category: slot.category))
+        }
+
+        withAnimation(.easeInOut(duration: 0.35)) {
+            session = entries
+        }
+        print("RouteVM 🗓️  Built session: \(entries.count) climbs")
+    }
+
+    /// Discard the currently planned session (does not remove climbs from history).
+    func clearSession() {
+        session.removeAll()
+    }
+
+    /// Mark a session entry as pending/done/skipped.
+    func setSessionEntryStatus(entryId: UUID, status: SessionStatus) {
+        guard let idx = session.firstIndex(where: { $0.id == entryId }) else { return }
+        session[idx].status = status
+
+        // Auto-mark the underlying climb as sent when the slot is completed.
+        if status == .done {
+            store.markSent(id: session[idx].climbId)
         }
     }
 

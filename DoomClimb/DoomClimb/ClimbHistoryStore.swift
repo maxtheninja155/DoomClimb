@@ -150,6 +150,49 @@ final class ClimbHistoryStore: ObservableObject {
         }
     }
 
+    /// Record a new attempt on a climb. Incrementing-only; does not flip `isSent`.
+    func logAttempt(id: UUID) {
+        guard let idx = history.firstIndex(where: { $0.id == id }) else { return }
+        history[idx].attempts += 1
+        save()
+    }
+
+    /// Undo the most recent attempt (does nothing if attempts is already 0).
+    func undoAttempt(id: UUID) {
+        guard let idx = history.firstIndex(where: { $0.id == id }) else { return }
+        if history[idx].attempts > 0 {
+            history[idx].attempts -= 1
+            save()
+        }
+    }
+
+    /// Mark a climb as sent (completed). Also increments attempts so the send
+    /// counts as an attempt if the user never tapped Log Attempt first.
+    func markSent(id: UUID) {
+        guard let idx = history.firstIndex(where: { $0.id == id }) else { return }
+        if !history[idx].isSent {
+            history[idx].isSent = true
+            history[idx].sentAt = Date()
+            if history[idx].attempts == 0 {
+                history[idx].attempts = 1
+            }
+            save()
+        }
+    }
+
+    /// Clear the sent flag (keeps attempt count intact).
+    func unmarkSent(id: UUID) {
+        guard let idx = history.firstIndex(where: { $0.id == id }) else { return }
+        history[idx].isSent = false
+        history[idx].sentAt = nil
+        save()
+    }
+
+    /// All climbs that have been sent, newest-send first.
+    var sends: [SavedClimb] {
+        history.filter(\.isSent).sorted { ($0.sentAt ?? .distantPast) > ($1.sentAt ?? .distantPast) }
+    }
+
     /// Remove all climbs that are not marked as favorites.
     func clearNonFavorites() {
         history.removeAll { !$0.isFavorite }

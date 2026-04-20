@@ -95,7 +95,7 @@ struct BoulderRoute: Codable, Hashable {
 // MARK: - Saved Climb (history + favorites wrapper)
 
 /// A climb that has been saved to history. Wraps a `BoulderRoute` with a stable
-/// identifier, favorite flag, and optional custom name.
+/// identifier, favorite flag, optional custom name, and send-tracking state.
 struct SavedClimb: Identifiable, Codable, Hashable {
     let id: UUID
     var route: BoulderRoute
@@ -103,16 +103,70 @@ struct SavedClimb: Identifiable, Codable, Hashable {
     var isFavorite: Bool
     var customName: String?
 
+    // Send tracking
+    var attempts: Int
+    var isSent: Bool
+    var sentAt: Date?
+
     init(route: BoulderRoute,
          id: UUID = UUID(),
          savedAt: Date = Date(),
          isFavorite: Bool = false,
-         customName: String? = nil) {
+         customName: String? = nil,
+         attempts: Int = 0,
+         isSent: Bool = false,
+         sentAt: Date? = nil) {
         self.id = id
         self.route = route
         self.savedAt = savedAt
         self.isFavorite = isFavorite
         self.customName = customName
+        self.attempts = attempts
+        self.isSent = isSent
+        self.sentAt = sentAt
+    }
+
+    // Custom decoder preserves backwards compatibility with history files
+    // saved before the send-tracking fields existed.
+    enum CodingKeys: String, CodingKey {
+        case id, route, savedAt, isFavorite, customName, attempts, isSent, sentAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id         = try c.decode(UUID.self,         forKey: .id)
+        self.route      = try c.decode(BoulderRoute.self, forKey: .route)
+        self.savedAt    = try c.decode(Date.self,         forKey: .savedAt)
+        self.isFavorite = try c.decode(Bool.self,         forKey: .isFavorite)
+        self.customName = try c.decodeIfPresent(String.self, forKey: .customName)
+        self.attempts   = try c.decodeIfPresent(Int.self,    forKey: .attempts) ?? 0
+        self.isSent     = try c.decodeIfPresent(Bool.self,   forKey: .isSent)   ?? false
+        self.sentAt     = try c.decodeIfPresent(Date.self,   forKey: .sentAt)
+    }
+}
+
+// MARK: - Session Planner
+
+/// Status of a single entry in a planned session.
+enum SessionStatus: String, Codable {
+    case pending, done, skipped
+}
+
+/// One climb slot in a planned session, referencing a `SavedClimb` by id.
+struct SessionEntry: Identifiable, Codable, Hashable {
+    let id: UUID
+    let climbId: UUID
+    let category: SessionCategory
+    var status: SessionStatus
+
+    init(id: UUID = UUID(),
+         climbId: UUID,
+         category: SessionCategory,
+         status: SessionStatus = .pending) {
+        self.id = id
+        self.climbId = climbId
+        self.category = category
+        self.status = status
     }
 }
 

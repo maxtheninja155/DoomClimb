@@ -10,6 +10,10 @@ struct ContentView: View {
     @State private var showRenameAlert = false
     @State private var renameText: String = ""
     @State private var showSettingsSheet = false
+    @State private var showSessionSheet = false
+    @State private var showShareSheet = false
+    @State private var showImportAlert = false
+    @State private var importAlertMessage = ""
 
     var body: some View {
         NavigationStack {
@@ -69,23 +73,6 @@ struct ContentView: View {
                             }
                             .pickerStyle(.segmented)
                         }
-                    }
-
-                    // MARK: - Technique picker (only for generated routes)
-                    if vm.generationMode == .newGenerated {
-                        ControlCard {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Label("Technique Focus", systemImage: "hand.raised.fingers.spread")
-                                Picker("Technique", selection: $vm.selectedTechnique) {
-                                    ForEach(Technique.allCases) { t in
-                                        Text(t.rawValue).tag(t)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .tint(.primary)
-                            }
-                        }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
 
                     // MARK: - Generate button
@@ -171,6 +158,13 @@ struct ContentView: View {
                         Image(systemName: "clock.arrow.circlepath")
                     }
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showSessionSheet = true
+                    } label: {
+                        Image(systemName: "list.bullet.rectangle")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         vm.showBluetoothSheet = true
@@ -199,6 +193,29 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showSettingsSheet) {
                 SettingsView(store: vm.store)
+            }
+            .sheet(isPresented: $showSessionSheet) {
+                SessionPlannerView(vm: vm)
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let route = vm.currentRoute {
+                    ShareRouteSheet(route: route)
+                        .presentationDetents([.large])
+                } else {
+                    ContentUnavailableView(
+                        "No climb to share",
+                        systemImage: "square.dashed",
+                        description: Text("Generate a climb first.")
+                    )
+                }
+            }
+            .onOpenURL { url in
+                handleIncomingURL(url)
+            }
+            .alert("Import Climb", isPresented: $showImportAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(importAlertMessage)
             }
             .sheet(isPresented: $showEditSheet) {
                 NavigationStack {
@@ -235,6 +252,26 @@ struct ContentView: View {
             } message: {
                 Text("Enter a custom name for this climb. Reset clears it back to the default.")
             }
+        }
+    }
+
+    // MARK: - Deep link handling
+
+    private func handleIncomingURL(_ url: URL) {
+        do {
+            let route = try RouteShareCodec.decode(from: url)
+            let saved = vm.store.append(route)
+            withAnimation(.easeInOut(duration: 0.35)) {
+                vm.currentClimbId = saved.id
+                showBoard = true
+            }
+            importAlertMessage = "Added a \(route.grade) @ \(route.angle)° climb to your history."
+            showImportAlert = true
+            print("ContentView 📥  Imported shared route → \(saved.id.uuidString.prefix(8))…")
+        } catch {
+            importAlertMessage = "This share link couldn't be loaded. It may be from a newer version of DoomClimb or may be corrupted."
+            showImportAlert = true
+            print("ContentView ⚠️  Failed to import shared URL: \(error)")
         }
     }
 
@@ -294,6 +331,16 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: "slider.horizontal.3")
                             .foregroundStyle(.orange)
+                            .font(.headline)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Share → show QR code + share sheet
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.indigo)
                             .font(.headline)
                     }
                     .buttonStyle(.plain)
