@@ -117,13 +117,12 @@ final class CoreMLRouteGenerator {
     // MARK: - Generation
 
     /// Maximum number of generation attempts before giving up.
-    private static let maxRetries = 5
+    private static let maxRetries = 8
 
-    /// Classifier-Free Guidance scale. 1.0 = no guidance (original behavior).
-    /// Higher values push the model harder toward the target grade/angle.
-    /// 2.0–3.0 is a good range for tighter grade accuracy.
-    func generate(grade: Int, angle: Int, temperature: Float = 0.9, topK: Int = 40,
-                  guidanceScale: Float = 2.0) -> BoulderRoute? {
+    /// Classifier-Free Guidance scale. Higher values push the model harder toward
+    /// the target grade/angle. 3.5 gives tight grade accuracy with good route diversity.
+    func generate(grade: Int, angle: Int, temperature: Float = 0.75, topK: Int = 20,
+                  guidanceScale: Float = 3.5) -> BoulderRoute? {
         for attempt in 1...Self.maxRetries {
             guard let route = generateOnce(grade: grade, angle: angle, temperature: temperature,
                                            topK: topK, guidanceScale: guidanceScale) else {

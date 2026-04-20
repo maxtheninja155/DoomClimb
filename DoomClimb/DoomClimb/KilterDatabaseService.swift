@@ -114,6 +114,58 @@ final class KilterDatabaseService {
         }
     }
 
+    // MARK: - Duplicate Detection
+
+    /// Per-grade cache of hold-set fingerprints. Loaded lazily on first check for each grade.
+    private var fingerprintCache: [Int: Set<String>] = [:]
+
+    /// Returns true if the placement IDs exactly match a known community climb at this grade.
+    func isKnownClimb(placementIds: [Int], grade: Int) -> Bool {
+        if fingerprintCache[grade] == nil {
+            fingerprintCache[grade] = loadFingerprints(for: grade)
+        }
+        let fingerprint = placementIds.sorted().map(String.init).joined(separator: ",")
+        return fingerprintCache[grade]?.contains(fingerprint) ?? false
+    }
+
+    private func loadFingerprints(for grade: Int) -> Set<String> {
+        let (minDiff, maxDiff) = Self.difficultyRange(for: grade)
+        let sql = """
+            SELECT c.frames
+            FROM   climbs c
+            JOIN   climb_stats cs ON cs.climb_uuid = c.uuid
+            WHERE  cs.difficulty_average >= ?
+              AND  cs.difficulty_average  < ?
+              AND  c.is_listed    = 1
+              AND  c.layout_id    = ?
+              AND  c.frames_count = 1
+        """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_double(stmt, 1, minDiff)
+        sqlite3_bind_double(stmt, 2, maxDiff)
+        sqlite3_bind_int(stmt,    3, Int32(Self.layoutId))
+
+        var fingerprints = Set<String>()
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let raw = sqlite3_column_text(stmt, 0) else { continue }
+            let frames = String(cString: raw)
+            let ids = extractPlacementIds(from: frames).sorted().map(String.init).joined(separator: ",")
+            if !ids.isEmpty { fingerprints.insert(ids) }
+        }
+
+        print("KilterDB ✅  Cached \(fingerprints.count) fingerprints for V\(grade) duplicate detection")
+        return fingerprints
+    }
+
+    private func extractPlacementIds(from frames: String) -> [Int] {
+        frames.components(separatedBy: "p").filter { !$0.isEmpty }.compactMap { part in
+            Int(part.components(separatedBy: "r").first ?? "")
+        }
+    }
+
     // MARK: - Helpers
 
     private static func mapRole(_ roleId: Int) -> HoldRole {

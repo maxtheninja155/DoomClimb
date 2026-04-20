@@ -85,8 +85,25 @@ class RouteViewModel: ObservableObject {
                 route = database?.fetchRandomClimb(grade: grade, angle: angle)
 
             case .newGenerated:
-                // Try CoreML model first, fall back to mock generator
-                route = coreMLGenerator?.generate(grade: grade, angle: angle)
+                // Try CoreML, rejecting routes that exactly match an existing Kilter climb.
+                // The model was trained on real Kilter data and can memorize popular routes.
+                let maxDuplicateRetries = 4
+                for attempt in 1...maxDuplicateRetries {
+                    guard let candidate = coreMLGenerator?.generate(grade: grade, angle: angle) else {
+                        break  // CoreML unavailable — stop trying, fall through to mock
+                    }
+                    let placementIds = candidate.holds.map(\.hold.id)
+                    if let db = database, db.isKnownClimb(placementIds: placementIds, grade: grade) {
+                        print("RouteVM ⚠️  Generated route matches a known Kilter climb (attempt \(attempt)/\(maxDuplicateRetries)) — retrying")
+                        if attempt == maxDuplicateRetries {
+                            route = candidate  // Accept on final attempt rather than falling back to mock
+                            print("RouteVM ⚠️  Accepting duplicate after \(maxDuplicateRetries) attempts")
+                        }
+                    } else {
+                        route = candidate
+                        break
+                    }
+                }
 
                 if route == nil {
                     print("RouteVM ⚠️  CoreML unavailable, falling back to mock generator")
