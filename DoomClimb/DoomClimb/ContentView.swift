@@ -9,6 +9,7 @@ struct ContentView: View {
     // Rename alert state for the currently displayed climb
     @State private var showRenameAlert = false
     @State private var renameText: String = ""
+    @State private var showSettingsSheet = false
 
     var body: some View {
         NavigationStack {
@@ -178,6 +179,13 @@ struct ContentView: View {
                             .foregroundStyle(bluetoothColor)
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSettingsSheet = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                }
             }
             .sheet(isPresented: $vm.showBluetoothSheet) {
                 BluetoothSheet(
@@ -188,6 +196,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showHistorySheet) {
                 HistorySheet(vm: vm)
+            }
+            .sheet(isPresented: $showSettingsSheet) {
+                SettingsView(store: vm.store)
             }
             .sheet(isPresented: $showEditSheet) {
                 NavigationStack {
