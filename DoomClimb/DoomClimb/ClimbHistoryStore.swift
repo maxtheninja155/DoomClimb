@@ -150,6 +150,18 @@ final class ClimbHistoryStore: ObservableObject {
         }
     }
 
+    /// Remove all climbs that are not marked as favorites.
+    func clearNonFavorites() {
+        history.removeAll { !$0.isFavorite }
+        save()
+    }
+
+    /// Remove every climb from history, including favorites.
+    func clearAll() {
+        history.removeAll()
+        save()
+    }
+
     /// If we're over the cap, remove the oldest non-favorited climb(s) until
     /// we're back under. Favorites are immune.
     private func prune() {

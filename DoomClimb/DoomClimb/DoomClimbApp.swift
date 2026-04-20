@@ -9,10 +9,18 @@ import SwiftUI
 
 @main
 struct DoomClimbApp: App {
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .preferredColorScheme(.dark)
+            Group {
+                if hasSeenOnboarding {
+                    ContentView()
+                } else {
+                    OnboardingView()
+                }
+            }
+            .preferredColorScheme(.dark)
         }
     }
 }

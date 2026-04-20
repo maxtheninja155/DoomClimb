@@ -76,11 +76,13 @@ def load_socket_positions():
     swift_path = os.path.join(os.path.dirname(__file__), "..",
                               "DoomClimb", "DoomClimb", "HoldSocketMap.swift")
     import re
-    pattern = re.compile(r'^\s*(\d+)\s*:\s*SIMD2<Float>\(\s*([\d.]+)\s*,\s*([\d.]+)\s*\)')
+    # Match: Socket(placementId: 1073, setId: 1, x: 0.941083, y: 0.931238)
+    pattern = re.compile(
+        r'Socket\(placementId:\s*(\d+),\s*setId:\s*\d+,\s*x:\s*([\d.]+),\s*y:\s*([\d.]+)\s*\)')
     positions = {}
     with open(swift_path) as f:
         for line in f:
-            m = pattern.match(line)
+            m = pattern.search(line)
             if m:
                 pid = int(m.group(1))
                 positions[pid] = (float(m.group(2)), float(m.group(3)))

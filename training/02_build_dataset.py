@@ -30,11 +30,13 @@ import os
 import random
 from collections import Counter
 
+from climbability_validator import validate_climbability, calibrate_reach
+
 # ── Configuration ────────────────────────────────────────────────────────────
 # Tweak these to control data quality vs quantity tradeoff
 
-MIN_ASCENTS    = 5      # Minimum ascensionist count (filters out untested climbs)
-MIN_QUALITY    = 1.5    # Minimum quality rating (filters out bad climbs)
+MIN_ASCENTS    = 10     # Minimum ascensionist count (ensures reliable grades)
+MIN_QUALITY    = 2.0    # Minimum quality rating (filters out low-quality climbs)
 MIN_HOLDS      = 4      # Minimum holds in a climb (too few = boring)
 MAX_HOLDS      = 30     # Maximum holds in a climb (too many = probably data errors)
 VAL_FRACTION   = 0.1    # 10% of data for validation
@@ -58,11 +60,13 @@ def load_socket_positions():
     swift_path = os.path.join(os.path.dirname(__file__), "..",
                               "DoomClimb", "DoomClimb", "HoldSocketMap.swift")
     import re
-    pattern = re.compile(r'^\s*(\d+)\s*:\s*SIMD2<Float>\(\s*([\d.]+)\s*,\s*([\d.]+)\s*\)')
+    # Match: Socket(placementId: 1073, setId: 1, x: 0.941083, y: 0.931238)
+    pattern = re.compile(
+        r'Socket\(placementId:\s*(\d+),\s*setId:\s*\d+,\s*x:\s*([\d.]+),\s*y:\s*([\d.]+)\s*\)')
     positions = {}
     with open(swift_path) as f:
         for line in f:
-            m = pattern.match(line)
+            m = pattern.search(line)
             if m:
                 pid = int(m.group(1))
                 x, y = float(m.group(2)), float(m.group(3))
@@ -192,11 +196,12 @@ def build_vocab(climbs):
       0: PAD     — padding for batching
       1: BOS     — beginning of sequence
       2: EOS     — end of sequence
-      3: SEP     — separator between (hold, role) pairs (optional, for clarity)
-      4–20:      — GRADE_V0 through GRADE_V16 (17 tokens)
-      21–35:     — ANGLE_0 through ANGLE_70 (15 tokens, step 5)
-      36–39:     — ROLE_12 (start), ROLE_13 (middle), ROLE_14 (finish), ROLE_15 (foot)
-      40+:       — One token per unique placement ID
+      3: SEP     — separator (reserved)
+      4: UNCOND  — unconditional token for classifier-free guidance
+      5–21:      — GRADE_V0 through GRADE_V16 (17 tokens)
+      22–36:     — ANGLE_0 through ANGLE_70 (15 tokens, step 5)
+      37–40:     — ROLE_12 (start), ROLE_13 (middle), ROLE_14 (finish), ROLE_15 (foot)
+      41+:       — One token per unique placement ID
     """
     # Collect all placement IDs actually used in our filtered dataset
     all_pids = set()
@@ -212,24 +217,25 @@ def build_vocab(climbs):
         'BOS': 1,
         'EOS': 2,
         'SEP': 3,
+        'UNCOND': 4,
     }
 
     # Grade tokens (V0–V16)
     for g in range(17):
-        vocab[f'GRADE_{g}'] = 4 + g
+        vocab[f'GRADE_{g}'] = 5 + g
 
     # Angle tokens (0°–70° in steps of 5)
     valid_angles = list(range(0, 75, 5))  # [0, 5, 10, ..., 70]
     for i, angle in enumerate(valid_angles):
-        vocab[f'ANGLE_{angle}'] = 21 + i
+        vocab[f'ANGLE_{angle}'] = 22 + i
 
     # Role tokens
     role_ids = [12, 13, 14, 15]
     for i, rid in enumerate(role_ids):
-        vocab[f'ROLE_{rid}'] = 36 + i
+        vocab[f'ROLE_{rid}'] = 37 + i
 
     # Hold (placement) tokens
-    hold_offset = 40
+    hold_offset = 41
     pid_to_token = {}
     for i, pid in enumerate(all_pids):
         token_name = f'HOLD_{pid}'
@@ -238,7 +244,7 @@ def build_vocab(climbs):
         pid_to_token[pid] = token_id
 
     print(f"Vocabulary size: {len(vocab)}")
-    print(f"  Special tokens: 4")
+    print(f"  Special tokens: 5  (PAD, BOS, EOS, SEP, UNCOND)")
     print(f"  Grade tokens:   17  (V0–V16)")
     print(f"  Angle tokens:   {len(valid_angles)}  (0°–70°)")
     print(f"  Role tokens:    4   (start, middle, finish, foot)")
@@ -291,6 +297,32 @@ def main():
     # Step 1: Extract
     climbs = extract_climbs()
 
+    # Step 1b: Climbability filter
+    # Calibrate reach from the extracted climbs, then drop impossible ones.
+    print("\nRunning climbability filter...")
+    climb_holds_for_cal = [c['holds'] for c in climbs]
+    max_reach, _ = calibrate_reach(climb_holds_for_cal, SOCKET_POS, percentile=95)
+    print(f"  Calibrated max_reach = {max_reach:.4f} (95th percentile)")
+
+    before_filter = len(climbs)
+    filtered_climbs = []
+    filter_reasons = Counter()
+    for climb in climbs:
+        ok, issues = validate_climbability(climb['holds'], SOCKET_POS, max_reach)
+        if ok:
+            filtered_climbs.append(climb)
+        else:
+            for issue in issues:
+                filter_reasons[issue] += 1
+
+    climbs = filtered_climbs
+    removed = before_filter - len(climbs)
+    print(f"  Removed {removed:,} unclimbable ({100*removed/before_filter:.1f}%)"
+          f" → {len(climbs):,} remaining")
+    if filter_reasons:
+        for reason, count in filter_reasons.most_common():
+            print(f"    {reason}: {count:,}")
+
     # Step 2: Build vocab
     vocab, pid_to_token = build_vocab(climbs)
 
@@ -303,6 +335,22 @@ def main():
             sequences.append(seq)
 
     print(f"Tokenized {len(sequences):,} sequences")
+
+    # Step 3b: Deduplicate
+    # Two sequences are duplicates if they have the same grade, angle, and hold set.
+    # (Same climb at different angles is NOT a duplicate — that's intentional.)
+    before_dedup = len(sequences)
+    seen = set()
+    unique_sequences = []
+    for seq in sequences:
+        # Key = tuple of all tokens (exact match — grade, angle, holds, roles, order)
+        key = tuple(seq)
+        if key not in seen:
+            seen.add(key)
+            unique_sequences.append(seq)
+    sequences = unique_sequences
+    removed = before_dedup - len(sequences)
+    print(f"  Dedup: removed {removed:,} exact duplicates → {len(sequences):,} unique")
 
     # Show sequence length distribution
     lengths = [len(s) for s in sequences]
