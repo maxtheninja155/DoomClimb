@@ -69,6 +69,8 @@ struct ClimbDetailView: View {
 
                     sendTracker(climb)
 
+                    VideoAttachmentSection(climbId: climbId, store: vm.store)
+
                     // Send to Board (only when BLE connected)
                     if vm.ble.state.isConnected {
                         Button {

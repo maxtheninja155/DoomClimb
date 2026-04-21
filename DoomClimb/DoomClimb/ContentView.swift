@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var renameText: String = ""
     @State private var showSettingsSheet = false
     @State private var showSessionSheet = false
+    @State private var showStatsSheet = false
     @State private var showShareSheet = false
     @State private var showImportAlert = false
     @State private var importAlertMessage = ""
@@ -165,6 +166,13 @@ struct ContentView: View {
                         Image(systemName: "list.bullet.rectangle")
                     }
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showStatsSheet = true
+                    } label: {
+                        Image(systemName: "chart.bar.xaxis")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         vm.showBluetoothSheet = true
@@ -196,6 +204,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showSessionSheet) {
                 SessionPlannerView(vm: vm)
+            }
+            .sheet(isPresented: $showStatsSheet) {
+                StatsView(vm: vm)
             }
             .sheet(isPresented: $showShareSheet) {
                 if let route = vm.currentRoute {

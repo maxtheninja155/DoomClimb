@@ -49,8 +49,14 @@ final class ClimbHistoryStore: ObservableObject {
         return climb
     }
 
-    /// Remove a climb by id. Safe to call with an unknown id.
+    /// Remove a climb by id. Also deletes any attached video file.
     func delete(id: UUID) {
+        if let climb = history.first(where: { $0.id == id }),
+           let filename = climb.videoFilename {
+            try? FileManager.default.removeItem(
+                at: Self.videosDirectory().appendingPathComponent(filename)
+            )
+        }
         history.removeAll { $0.id == id }
         save()
     }
@@ -191,6 +197,70 @@ final class ClimbHistoryStore: ObservableObject {
     /// All climbs that have been sent, newest-send first.
     var sends: [SavedClimb] {
         history.filter(\.isSent).sorted { ($0.sentAt ?? .distantPast) > ($1.sentAt ?? .distantPast) }
+    }
+
+    // MARK: - Video attachment
+
+    /// Persistent directory for locally-stored climb videos.
+    static func videosDirectory() -> URL {
+        let support = FileManager.default.urls(
+            for: .applicationSupportDirectory, in: .userDomainMask
+        )[0]
+        let dir = support.appendingPathComponent("ClimbVideos", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Copy the video at `tempURL` into the app's video store and link it to
+    /// the climb. Any previously attached video is deleted first.
+    func attachVideo(id: UUID, from tempURL: URL) {
+        guard let idx = history.firstIndex(where: { $0.id == id }) else { return }
+
+        // Remove previous attachment if any.
+        if let old = history[idx].videoFilename {
+            try? FileManager.default.removeItem(
+                at: Self.videosDirectory().appendingPathComponent(old)
+            )
+        }
+
+        let ext      = tempURL.pathExtension.isEmpty ? "mov" : tempURL.pathExtension
+        let filename = "\(id.uuidString).\(ext)"
+        let destURL  = Self.videosDirectory().appendingPathComponent(filename)
+
+        do {
+            if FileManager.default.fileExists(atPath: destURL.path) {
+                try FileManager.default.removeItem(at: destURL)
+            }
+            try FileManager.default.copyItem(at: tempURL, to: destURL)
+            history[idx].videoFilename = filename
+            save()
+            print("ClimbHistoryStore 🎥  Attached video → \(filename)")
+        } catch {
+            print("ClimbHistoryStore ❌  Failed to attach video: \(error)")
+        }
+    }
+
+    /// Remove the video attachment for a climb and delete the local file.
+    func detachVideo(id: UUID) {
+        guard let idx = history.firstIndex(where: { $0.id == id }) else { return }
+        if let filename = history[idx].videoFilename {
+            try? FileManager.default.removeItem(
+                at: Self.videosDirectory().appendingPathComponent(filename)
+            )
+        }
+        history[idx].videoFilename = nil
+        save()
+        print("ClimbHistoryStore 🗑️  Detached video for \(id.uuidString.prefix(8))…")
+    }
+
+    /// Resolve the local file URL for a climb's attached video.
+    /// Returns `nil` if no video is attached or the file no longer exists.
+    func videoURL(for id: UUID) -> URL? {
+        guard let climb = history.first(where: { $0.id == id }),
+              let filename = climb.videoFilename
+        else { return nil }
+        let url = Self.videosDirectory().appendingPathComponent(filename)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     /// Remove all climbs that are not marked as favorites.

@@ -29,9 +29,22 @@
 		EAFA86572F7EDEFF001E7983 /* DoomClimbUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DoomClimbUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EAE600C82F972A01005A9C15 /* Exceptions for "DoomClimb" folder in "DoomClimb" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EAFA863F2F7EDEFE001E7983 /* DoomClimb */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EAFA86422F7EDEFE001E7983 /* DoomClimb */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EAE600C82F972A01005A9C15 /* Exceptions for "DoomClimb" folder in "DoomClimb" target */,
+			);
 			path = DoomClimb;
 			sourceTree = "<group>";
 		};
@@ -401,6 +414,7 @@
 				DEVELOPMENT_TEAM = UPT9QU74DG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DoomClimb/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Doom Climb";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "DoomClimb uses Bluetooth to connect to your Kilter Board and light up climbing routes on the wall.";
@@ -414,7 +428,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.0;
+				MARKETING_VERSION = 5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Max.DoomClimb;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -439,6 +453,7 @@
 				DEVELOPMENT_TEAM = UPT9QU74DG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DoomClimb/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Doom Climb";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "DoomClimb uses Bluetooth to connect to your Kilter Board and light up climbing routes on the wall.";
@@ -452,7 +467,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.0;
+				MARKETING_VERSION = 5.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.Max.DoomClimb;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

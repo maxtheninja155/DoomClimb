@@ -108,6 +108,9 @@ struct SavedClimb: Identifiable, Codable, Hashable {
     var isSent: Bool
     var sentAt: Date?
 
+    // Video — filename only; full path is resolved via ClimbHistoryStore.videosDirectory()
+    var videoFilename: String?
+
     init(route: BoulderRoute,
          id: UUID = UUID(),
          savedAt: Date = Date(),
@@ -115,7 +118,8 @@ struct SavedClimb: Identifiable, Codable, Hashable {
          customName: String? = nil,
          attempts: Int = 0,
          isSent: Bool = false,
-         sentAt: Date? = nil) {
+         sentAt: Date? = nil,
+         videoFilename: String? = nil) {
         self.id = id
         self.route = route
         self.savedAt = savedAt
@@ -124,24 +128,26 @@ struct SavedClimb: Identifiable, Codable, Hashable {
         self.attempts = attempts
         self.isSent = isSent
         self.sentAt = sentAt
+        self.videoFilename = videoFilename
     }
 
     // Custom decoder preserves backwards compatibility with history files
-    // saved before the send-tracking fields existed.
+    // saved before the send-tracking / video fields existed.
     enum CodingKeys: String, CodingKey {
-        case id, route, savedAt, isFavorite, customName, attempts, isSent, sentAt
+        case id, route, savedAt, isFavorite, customName, attempts, isSent, sentAt, videoFilename
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.id         = try c.decode(UUID.self,         forKey: .id)
-        self.route      = try c.decode(BoulderRoute.self, forKey: .route)
-        self.savedAt    = try c.decode(Date.self,         forKey: .savedAt)
-        self.isFavorite = try c.decode(Bool.self,         forKey: .isFavorite)
-        self.customName = try c.decodeIfPresent(String.self, forKey: .customName)
-        self.attempts   = try c.decodeIfPresent(Int.self,    forKey: .attempts) ?? 0
-        self.isSent     = try c.decodeIfPresent(Bool.self,   forKey: .isSent)   ?? false
-        self.sentAt     = try c.decodeIfPresent(Date.self,   forKey: .sentAt)
+        self.id            = try c.decode(UUID.self,         forKey: .id)
+        self.route         = try c.decode(BoulderRoute.self, forKey: .route)
+        self.savedAt       = try c.decode(Date.self,         forKey: .savedAt)
+        self.isFavorite    = try c.decode(Bool.self,         forKey: .isFavorite)
+        self.customName    = try c.decodeIfPresent(String.self, forKey: .customName)
+        self.attempts      = try c.decodeIfPresent(Int.self,    forKey: .attempts)      ?? 0
+        self.isSent        = try c.decodeIfPresent(Bool.self,   forKey: .isSent)        ?? false
+        self.sentAt        = try c.decodeIfPresent(Date.self,   forKey: .sentAt)
+        self.videoFilename = try c.decodeIfPresent(String.self, forKey: .videoFilename)
     }
 }
 

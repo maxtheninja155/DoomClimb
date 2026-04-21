@@ -185,6 +185,12 @@ private struct HistoryRow: View {
                             .font(.caption)
                             .foregroundStyle(.green)
                     }
+
+                    if climb.videoFilename != nil {
+                        Image(systemName: "video.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.purple)
+                    }
                 }
 
                 HStack(spacing: 6) {
