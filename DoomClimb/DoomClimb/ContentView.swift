@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var showBoard = false
     @State private var showHistorySheet = false
     @State private var showEditSheet = false
+    @State private var showLegendPopover = false
 
     // Rename alert state for the currently displayed climb
     @State private var showRenameAlert = false
@@ -31,9 +32,9 @@ struct ContentView: View {
                     }
                     .padding(.top, 8)
 
-                    // MARK: - Grade slider
+                    // MARK: - Parameters card
                     ControlCard {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 14) {
                             HStack {
                                 Label("Grade", systemImage: "figure.climbing")
                                 Spacer()
@@ -44,12 +45,9 @@ struct ContentView: View {
                             }
                             Slider(value: $vm.gradeValue, in: 0...16, step: 1)
                                 .tint(.green)
-                        }
-                    }
 
-                    // MARK: - Angle slider
-                    ControlCard {
-                        VStack(alignment: .leading, spacing: 10) {
+                            Divider()
+
                             HStack {
                                 Label("Wall Angle", systemImage: "angle")
                                 Spacer()
@@ -60,19 +58,6 @@ struct ContentView: View {
                             }
                             Slider(value: $vm.angleValue, in: 0...60, step: 5)
                                 .tint(.orange)
-                        }
-                    }
-
-                    // MARK: - Mode toggle
-                    ControlCard {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Label("Source", systemImage: "arrow.triangle.branch")
-                            Picker("Mode", selection: $vm.generationMode.animation(.easeInOut(duration: 0.25))) {
-                                ForEach(GenerationMode.allCases) { mode in
-                                    Text(mode.rawValue).tag(mode)
-                                }
-                            }
-                            .pickerStyle(.segmented)
                         }
                     }
 
@@ -106,7 +91,23 @@ struct ContentView: View {
                             BoardView(route: vm.currentRoute)
                                 .padding(.horizontal, 4)
 
-                            HoldLegend()
+                            Button {
+                                showLegendPopover = true
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "info.circle")
+                                    Text("Hold Legend")
+                                }
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                            .buttonStyle(.plain)
+                            .popover(isPresented: $showLegendPopover, arrowEdge: .bottom) {
+                                HoldLegend()
+                                    .padding()
+                                    .presentationCompactAdaptation(.popover)
+                            }
 
                             if vm.currentRoute != nil {
                                 // Send to Board button (shown when Bluetooth connected)
@@ -133,14 +134,6 @@ struct ContentView: View {
                                         .foregroundStyle(.secondary)
                                         .transition(.opacity)
                                 }
-
-                                Button("Clear", role: .destructive) {
-                                    vm.clearRoute()
-                                    if vm.ble.state.isConnected {
-                                        vm.clearBoard()
-                                    }
-                                }
-                                .font(.footnote)
                             }
                         }
                         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -153,24 +146,30 @@ struct ContentView: View {
             .background(Color(.systemBackground))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showHistorySheet = true
+                    Menu {
+                        Button {
+                            showHistorySheet = true
+                        } label: {
+                            Label("History", systemImage: "clock.arrow.circlepath")
+                        }
+                        Button {
+                            showSessionSheet = true
+                        } label: {
+                            Label("Session Planner", systemImage: "list.bullet.rectangle")
+                        }
+                        Button {
+                            showStatsSheet = true
+                        } label: {
+                            Label("Stats", systemImage: "chart.bar.xaxis")
+                        }
+                        Divider()
+                        Button {
+                            showSettingsSheet = true
+                        } label: {
+                            Label("Settings", systemImage: "gearshape")
+                        }
                     } label: {
-                        Image(systemName: "clock.arrow.circlepath")
-                    }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showSessionSheet = true
-                    } label: {
-                        Image(systemName: "list.bullet.rectangle")
-                    }
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showStatsSheet = true
-                    } label: {
-                        Image(systemName: "chart.bar.xaxis")
+                        Image(systemName: "line.3.horizontal")
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -179,13 +178,6 @@ struct ContentView: View {
                     } label: {
                         Image(systemName: bluetoothIcon)
                             .foregroundStyle(bluetoothColor)
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSettingsSheet = true
-                    } label: {
-                        Image(systemName: "gearshape")
                     }
                 }
             }
@@ -200,7 +192,7 @@ struct ContentView: View {
                 HistorySheet(vm: vm)
             }
             .sheet(isPresented: $showSettingsSheet) {
-                SettingsView(store: vm.store)
+                SettingsView(vm: vm)
             }
             .sheet(isPresented: $showSessionSheet) {
                 SessionPlannerView(vm: vm)

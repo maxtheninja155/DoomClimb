@@ -26,6 +26,9 @@ struct ClimbDetailView: View {
     // Share sheet
     @State private var showShareSheet = false
 
+    // Hold legend popover
+    @State private var showLegendPopover = false
+
     // Celebration trigger — increment to replay the send-flash effect.
     @State private var sendFlashTrigger: Int = 0
 
@@ -61,7 +64,23 @@ struct ClimbDetailView: View {
                         }
                     }
 
-                    HoldLegend()
+                    Button {
+                        showLegendPopover = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "info.circle")
+                            Text("Hold Legend")
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showLegendPopover, arrowEdge: .bottom) {
+                        HoldLegend()
+                            .padding()
+                            .presentationCompactAdaptation(.popover)
+                    }
 
                     if isEditing {
                         editorHint
@@ -139,21 +158,7 @@ struct ClimbDetailView: View {
             }
         }
         .toolbar {
-            // Edit mode toggle
-            if climb != nil {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isEditing.toggle()
-                        }
-                    } label: {
-                        Image(systemName: isEditing ? "pencil.circle.fill" : "pencil.circle")
-                            .foregroundStyle(isEditing ? .orange : .primary)
-                    }
-                }
-            }
-
-            // Favorite star
+            // Favorite star — always visible, one-tap action
             if let climb = climb {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -167,14 +172,27 @@ struct ClimbDetailView: View {
                 }
             }
 
-            // Share
+            // More menu: Edit + Share
             if climb != nil {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showShareSheet = true
+                    Menu {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isEditing.toggle()
+                            }
+                        } label: {
+                            Label(
+                                isEditing ? "Stop Editing" : "Edit Holds",
+                                systemImage: isEditing ? "pencil.circle.fill" : "pencil.circle"
+                            )
+                        }
+                        Button {
+                            showShareSheet = true
+                        } label: {
+                            Label("Share Climb", systemImage: "square.and.arrow.up")
+                        }
                     } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(.indigo)
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }
@@ -239,76 +257,69 @@ struct ClimbDetailView: View {
 
     @ViewBuilder
     private func sendTracker(_ climb: SavedClimb) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Send Tracker", systemImage: "checkmark.seal")
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+
+            // Attempts row with inline stepper
             HStack {
-                Label("Send Tracker", systemImage: "checkmark.seal")
-                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                Text("Attempts")
+                    .font(.system(.subheadline, design: .rounded))
+                    .foregroundStyle(.secondary)
                 Spacer()
-                if climb.isSent, let sentAt = climb.sentAt {
-                    Text("Sent \(sentAt.formatted(date: .abbreviated, time: .omitted))")
-                        .font(.caption2)
-                        .foregroundStyle(.green)
-                }
-            }
-
-            HStack(spacing: 10) {
-                statPill(label: "Attempts", value: "\(climb.attempts)", color: .cyan)
-                statPill(
-                    label: "Status",
-                    value: climb.isSent ? "Sent" : "Project",
-                    color: climb.isSent ? .green : .orange
-                )
-            }
-
-            HStack(spacing: 10) {
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        vm.store.logAttempt(id: climb.id)
-                    }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Log Attempt")
-                    }
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.cyan)
-
-                Button {
-                    let wasSent = climb.isSent
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        if wasSent {
-                            vm.store.unmarkSent(id: climb.id)
-                        } else {
-                            vm.store.markSent(id: climb.id)
+                HStack(spacing: 16) {
+                    if climb.attempts > 0 {
+                        Button {
+                            withAnimation { vm.store.undoAttempt(id: climb.id) }
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.secondary)
                         }
+                        .buttonStyle(.plain)
                     }
-                    if !wasSent {
-                        sendFlashTrigger &+= 1
+                    Text("\(climb.attempts)")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .monospacedDigit()
+                        .frame(minWidth: 28, alignment: .center)
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                            vm.store.logAttempt(id: climb.id)
+                        }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
                     }
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: climb.isSent ? "checkmark.seal.fill" : "checkmark.seal")
-                        Text(climb.isSent ? "Unmark Sent" : "Mark Sent")
-                    }
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
             }
 
-            if climb.attempts > 0 {
-                Button("Undo last attempt", role: .destructive) {
-                    withAnimation {
-                        vm.store.undoAttempt(id: climb.id)
-                    }
+            // Mark Sent — full-width primary action
+            Button {
+                let wasSent = climb.isSent
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    if wasSent { vm.store.unmarkSent(id: climb.id) }
+                    else { vm.store.markSent(id: climb.id) }
                 }
-                .font(.caption2)
+                if !wasSent { sendFlashTrigger &+= 1 }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: climb.isSent ? "checkmark.seal.fill" : "checkmark.seal")
+                    Text(climb.isSent ? "Sent ✓" : "Mark as Sent")
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(climb.isSent ? .green : .secondary)
+
+            if climb.isSent, let sentAt = climb.sentAt {
+                Text("Sent \(sentAt.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.caption2)
+                    .foregroundStyle(.green)
+                    .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .padding()
