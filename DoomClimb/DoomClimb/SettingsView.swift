@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @ObservedObject var store: ClimbHistoryStore
+    @ObservedObject var vm: RouteViewModel
     @Environment(\.dismiss) private var dismiss
 
     @State private var showClearNonFavoritesAlert = false
     @State private var showClearAllAlert = false
+
+    private var store: ClimbHistoryStore { vm.store }
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -50,6 +52,18 @@ struct SettingsView: View {
                     Text("Clearing history cannot be undone.")
                 }
 
+                Section {
+                    Picker("Source", selection: $vm.generationMode) {
+                        ForEach(GenerationMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                } header: {
+                    Text("Generation")
+                } footer: {
+                    Text("Kilter Climbs uses curated routes. New Generated creates routes from scratch.")
+                }
+
                 Section("About") {
                     HStack {
                         Text("Version")
@@ -88,6 +102,6 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(store: ClimbHistoryStore())
+    SettingsView(vm: RouteViewModel())
         .preferredColorScheme(.dark)
 }

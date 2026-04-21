@@ -298,7 +298,7 @@ struct SessionPlannerView: View {
                 }
 
                 ControlCard {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 14) {
                         HStack {
                             Label("Base Grade", systemImage: "figure.climbing")
                             Spacer()
@@ -309,11 +309,9 @@ struct SessionPlannerView: View {
                         }
                         Slider(value: $baseGrade, in: 0...16, step: 1)
                             .tint(.green)
-                    }
-                }
 
-                ControlCard {
-                    VStack(alignment: .leading, spacing: 10) {
+                        Divider()
+
                         HStack {
                             Label("Wall Angle", systemImage: "angle")
                             Spacer()
