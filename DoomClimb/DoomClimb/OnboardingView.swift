@@ -7,25 +7,25 @@ struct OnboardingView: View {
     private let pages: [OnboardingPage] = [
         OnboardingPage(
             icon: "figure.climbing",
-            iconColor: .green,
+            iconColor: .dcPrimary,
             title: "Welcome to\nDoomClimb",
             subtitle: "AI-powered boulder route generation for your Kilter Board."
         ),
         OnboardingPage(
             icon: "grid.circle.fill",
-            iconColor: .indigo,
+            iconColor: .dcSecondary,
             title: "What is a\nKilter Board?",
             subtitle: "A Kilter Board is a LED-equipped adjustable climbing wall. Holds light up to mark each route — start, hands, and finish."
         ),
         OnboardingPage(
             icon: "cpu.fill",
-            iconColor: .cyan,
+            iconColor: .dcSecondary,
             title: "AI Route\nGeneration",
             subtitle: "DoomClimb generates new boulder problems using a custom ML model trained on thousands of real Kilter routes, tuned to your grade and angle."
         ),
         OnboardingPage(
             icon: "antenna.radiowaves.left.and.right",
-            iconColor: .orange,
+            iconColor: .dcSecondary,
             title: "Connect Your\nBoard",
             subtitle: "Pair via Bluetooth and send any route directly to your board — the LEDs light up automatically."
         ),
@@ -53,7 +53,7 @@ struct OnboardingView: View {
                             .padding(.vertical, 14)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.indigo)
+                    .tint(.dcPrimary)
 
                     Button("Skip") {
                         hasSeenOnboarding = true
@@ -70,7 +70,7 @@ struct OnboardingView: View {
                             .padding(.vertical, 14)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.green)
+                    .tint(.dcPrimary)
                 }
             }
             .padding(.horizontal, 28)

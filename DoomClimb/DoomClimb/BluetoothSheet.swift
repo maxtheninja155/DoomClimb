@@ -114,14 +114,14 @@ struct BluetoothSheet: View {
                 .foregroundStyle(.secondary)
         case .scanning:
             Image(systemName: "antenna.radiowaves.left.and.right")
-                .foregroundStyle(.blue)
+                .foregroundStyle(Color.dcSecondary)
                 .symbolEffect(.pulse)
         case .connecting:
             Image(systemName: "antenna.radiowaves.left.and.right")
-                .foregroundStyle(.orange)
+                .foregroundStyle(Color.dcSecondary)
         case .connected:
             Image(systemName: "antenna.radiowaves.left.and.right.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.dcPrimary)
         }
     }
 }

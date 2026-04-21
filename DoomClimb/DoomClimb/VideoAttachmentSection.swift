@@ -73,7 +73,7 @@ struct VideoAttachmentSection: View {
         if isAttaching {
             HStack(spacing: 10) {
                 ProgressView()
-                    .tint(.purple)
+                    .tint(.dcSecondary)
                 Text("Copying video…")
                     .font(.system(.subheadline, design: .rounded))
                     .foregroundStyle(.secondary)
@@ -93,7 +93,7 @@ struct VideoAttachmentSection: View {
                 .padding(.vertical, 12)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.purple)
+            .tint(.dcSecondary)
         }
     }
 
@@ -137,7 +137,7 @@ struct VideoAttachmentSection: View {
                             .font(.caption)
                     }
                     .buttonStyle(.bordered)
-                    .tint(.purple)
+                    .tint(.dcSecondary)
 
                     // Remove
                     Button(role: .destructive) {

@@ -54,7 +54,7 @@ struct ClimbDetailView: View {
                                 .font(.caption2.bold())
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(.orange, in: Capsule())
+                                .background(Color.dcSecondary, in: Capsule())
                                 .foregroundStyle(.white)
                                 .padding(10)
                                 .transition(.opacity.combined(with: .scale))
@@ -85,7 +85,7 @@ struct ClimbDetailView: View {
                             .padding(.vertical, 12)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.green)
+                        .tint(.dcPrimary)
                     }
 
                     // LED send status
@@ -148,7 +148,7 @@ struct ClimbDetailView: View {
                         }
                     } label: {
                         Image(systemName: isEditing ? "pencil.circle.fill" : "pencil.circle")
-                            .foregroundStyle(isEditing ? .orange : .primary)
+                            .foregroundStyle(isEditing ? Color.dcSecondary : Color.primary)
                     }
                 }
             }
@@ -174,7 +174,7 @@ struct ClimbDetailView: View {
                         showShareSheet = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(.indigo)
+                            .foregroundStyle(Color.dcPrimary)
                     }
                 }
             }
@@ -212,9 +212,9 @@ struct ClimbDetailView: View {
             .buttonStyle(.plain)
 
             HStack(spacing: 10) {
-                badge(climb.route.grade, icon: "figure.climbing", color: .green)
-                badge("\(climb.route.angle)°", icon: "arrow.up.right", color: .orange)
-                badge("\(climb.route.moveCount) moves", icon: "arrow.up.forward", color: .cyan)
+                badge(climb.route.grade, icon: "figure.climbing", color: .dcPrimary)
+                badge("\(climb.route.angle)°", icon: "arrow.up.right", color: .dcSecondary)
+                badge("\(climb.route.moveCount) moves", icon: "arrow.up.forward", color: .dcSecondary)
             }
             .font(.caption)
 
@@ -247,16 +247,16 @@ struct ClimbDetailView: View {
                 if climb.isSent, let sentAt = climb.sentAt {
                     Text("Sent \(sentAt.formatted(date: .abbreviated, time: .omitted))")
                         .font(.caption2)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.dcPrimary)
                 }
             }
 
             HStack(spacing: 10) {
-                statPill(label: "Attempts", value: "\(climb.attempts)", color: .cyan)
+                statPill(label: "Attempts", value: "\(climb.attempts)", color: .dcSecondary)
                 statPill(
                     label: "Status",
                     value: climb.isSent ? "Sent" : "Project",
-                    color: climb.isSent ? .green : .orange
+                    color: climb.isSent ? .dcPrimary : .dcSecondary
                 )
             }
 
@@ -275,7 +275,7 @@ struct ClimbDetailView: View {
                     .padding(.vertical, 10)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.cyan)
+                .tint(.dcSecondary)
 
                 Button {
                     let wasSent = climb.isSent
@@ -299,7 +299,7 @@ struct ClimbDetailView: View {
                     .padding(.vertical, 10)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.green)
+                .tint(.dcPrimary)
             }
 
             if climb.attempts > 0 {
@@ -459,9 +459,9 @@ struct ClimbDetailView: View {
     private var bluetoothColor: Color {
         switch vm.ble.state {
         case .disconnected: return .secondary
-        case .scanning:     return .blue
-        case .connecting:   return .orange
-        case .connected:    return .green
+        case .scanning:     return .dcSecondary
+        case .connecting:   return .dcSecondary
+        case .connected:    return .dcPrimary
         }
     }
 }

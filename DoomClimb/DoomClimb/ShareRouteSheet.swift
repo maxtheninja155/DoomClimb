@@ -46,9 +46,9 @@ struct ShareRouteSheet: View {
 
                 VStack(spacing: 10) {
                     HStack(spacing: 10) {
-                        badge(route.grade, icon: "figure.climbing", color: .green)
-                        badge("\(route.angle)°", icon: "arrow.up.right", color: .orange)
-                        badge("\(route.moveCount) moves", icon: "arrow.up.forward", color: .cyan)
+                        badge(route.grade, icon: "figure.climbing", color: .dcPrimary)
+                        badge("\(route.angle)°", icon: "arrow.up.right", color: .dcSecondary)
+                        badge("\(route.moveCount) moves", icon: "arrow.up.forward", color: .dcSecondary)
                     }
                     .font(.caption)
                 }
@@ -66,7 +66,7 @@ struct ShareRouteSheet: View {
                         .padding(.vertical, 14)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.indigo)
+                    .tint(.dcPrimary)
                 }
 
                 Spacer(minLength: 0)

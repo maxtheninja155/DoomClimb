@@ -37,7 +37,7 @@ struct SettingsView: View {
                     Button("Clear Non-Favorites") {
                         showClearNonFavoritesAlert = true
                     }
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.dcSecondary)
                     .disabled(store.history.filter { !$0.isFavorite }.isEmpty)
 
                     Button("Clear All History", role: .destructive) {

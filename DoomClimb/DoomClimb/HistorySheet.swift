@@ -165,11 +165,11 @@ private struct HistoryRow: View {
         HStack(spacing: 12) {
             // Simple colored marker indicating grade
             Circle()
-                .fill(Color.green.opacity(0.15))
+                .fill(Color.dcPrimary.opacity(0.15))
                 .overlay(
                     Text(climb.route.grade)
                         .font(.system(.caption, design: .rounded, weight: .bold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Color.dcPrimary)
                 )
                 .frame(width: 36, height: 36)
 
@@ -183,13 +183,13 @@ private struct HistoryRow: View {
                     if climb.isSent {
                         Image(systemName: "checkmark.seal.fill")
                             .font(.caption)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(Color.dcPrimary)
                     }
 
                     if climb.videoFilename != nil {
                         Image(systemName: "video.fill")
                             .font(.caption2)
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(Color.dcSecondary)
                     }
                 }
 

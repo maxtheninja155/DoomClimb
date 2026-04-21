@@ -19,9 +19,9 @@ enum SessionType: String, CaseIterable, Identifiable {
 
     var tint: Color {
         switch self {
-        case .easy:    return .green
-        case .normal:  return .cyan
-        case .project: return .red
+        case .easy:    return .dcSecondary
+        case .normal:  return .dcPrimary
+        case .project: return .dcAccent
         }
     }
 
@@ -72,9 +72,9 @@ enum SessionCategory: String, Codable {
 
     var tint: Color {
         switch self {
-        case .warmup:  return .green
-        case .base:    return .cyan
-        case .project: return .red
+        case .warmup:  return .dcPrimary
+        case .base:    return .dcSecondary
+        case .project: return .dcAccent
         }
     }
 }
@@ -308,7 +308,7 @@ struct SessionPlannerView: View {
                                 .contentTransition(.numericText())
                         }
                         Slider(value: $baseGrade, in: 0...16, step: 1)
-                            .tint(.green)
+                            .tint(.dcPrimary)
                     }
                 }
 
@@ -323,7 +323,7 @@ struct SessionPlannerView: View {
                                 .contentTransition(.numericText())
                         }
                         Slider(value: $angle, in: 0...60, step: 5)
-                            .tint(.orange)
+                            .tint(.dcSecondary)
                     }
                 }
 
@@ -429,10 +429,10 @@ struct SessionPlannerView: View {
                 Spacer()
                 Text("\(done)/\(total) complete")
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.dcPrimary)
             }
             ProgressView(value: Double(done), total: Double(total))
-                .tint(.green)
+                .tint(.dcPrimary)
         }
     }
 
@@ -461,7 +461,7 @@ struct SessionPlannerView: View {
                             if done {
                                 Image(systemName: "checkmark.seal.fill")
                                     .font(.caption2)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(Color.dcPrimary)
                             } else if skipped {
                                 Image(systemName: "forward.end.fill")
                                     .font(.caption2)

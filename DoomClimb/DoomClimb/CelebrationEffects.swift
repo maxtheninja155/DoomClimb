@@ -28,8 +28,8 @@ struct SendFlashOverlay: ViewModifier {
 
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 92, weight: .bold))
-                            .foregroundStyle(.green)
-                            .shadow(color: .green.opacity(0.45), radius: 18)
+                            .foregroundStyle(Color.dcAccent)
+                            .shadow(color: .dcAccent.opacity(0.45), radius: 18)
                             .scaleEffect(scale)
                             .opacity(opacity)
                     }
@@ -98,7 +98,7 @@ struct ConfettiBurst: View {
     @State private var pieces: [ConfettiPiece] = []
     @State private var progress: CGFloat = 0
 
-    private let palette: [Color] = [.green, .cyan, .yellow, .orange, .pink, .purple]
+    private let palette: [Color] = [.dcPrimary, .dcAccent, .dcSecondary, .yellow, .orange, .pink]
 
     var body: some View {
         GeometryReader { geo in

@@ -43,7 +43,7 @@ struct ContentView: View {
                                     .contentTransition(.numericText())
                             }
                             Slider(value: $vm.gradeValue, in: 0...16, step: 1)
-                                .tint(.green)
+                                .tint(.dcPrimary)
                         }
                     }
 
@@ -59,7 +59,7 @@ struct ContentView: View {
                                     .contentTransition(.numericText())
                             }
                             Slider(value: $vm.angleValue, in: 0...60, step: 5)
-                                .tint(.orange)
+                                .tint(.dcSecondary)
                         }
                     }
 
@@ -93,7 +93,7 @@ struct ContentView: View {
                         .padding(.vertical, 14)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.indigo)
+                    .tint(.dcPrimary)
                     .disabled(vm.isGenerating)
 
                     // MARK: - Board display
@@ -123,7 +123,7 @@ struct ContentView: View {
                                         .padding(.vertical, 10)
                                     }
                                     .buttonStyle(.borderedProminent)
-                                    .tint(.green)
+                                    .tint(.dcPrimary)
                                 }
 
                                 // LED send status
@@ -295,9 +295,9 @@ struct ContentView: View {
     private var bluetoothColor: Color {
         switch vm.ble.state {
         case .disconnected: return .secondary
-        case .scanning:     return .blue
-        case .connecting:   return .orange
-        case .connected:    return .green
+        case .scanning:     return .dcSecondary
+        case .connecting:   return .dcSecondary
+        case .connected:    return .dcPrimary
         }
     }
 
@@ -341,7 +341,7 @@ struct ContentView: View {
                         showEditSheet = true
                     } label: {
                         Image(systemName: "slider.horizontal.3")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color.dcSecondary)
                             .font(.headline)
                     }
                     .buttonStyle(.plain)
@@ -351,7 +351,7 @@ struct ContentView: View {
                         showShareSheet = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
-                            .foregroundStyle(.indigo)
+                            .foregroundStyle(Color.dcPrimary)
                             .font(.headline)
                     }
                     .buttonStyle(.plain)
@@ -372,9 +372,9 @@ struct ContentView: View {
                 .buttonStyle(.plain)
                 .disabled(!vm.canGoBack)
 
-                badge(route.grade, icon: "figure.climbing", color: .green)
-                badge("\(route.angle)°", icon: "arrow.up.right", color: .orange)
-                badge("\(route.moveCount) moves", icon: "arrow.up.forward", color: .cyan)
+                badge(route.grade, icon: "figure.climbing", color: .dcPrimary)
+                badge("\(route.angle)°", icon: "arrow.up.right", color: .dcSecondary)
+                badge("\(route.moveCount) moves", icon: "arrow.up.forward", color: .dcSecondary)
 
                 Button {
                     vm.goForward()

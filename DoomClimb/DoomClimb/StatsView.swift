@@ -34,7 +34,7 @@ struct StatsView: View {
                 value: currentStreak,
                 label: "Current Streak",
                 icon: "flame.fill",
-                color: .orange
+                color: .dcPrimary
             )
             streakCard(
                 value: longestStreak,
@@ -71,8 +71,8 @@ struct StatsView: View {
 
     private var summaryRow: some View {
         HStack(spacing: 12) {
-            summaryCard(value: vm.store.history.count, label: "Total Climbs", color: .cyan)
-            summaryCard(value: vm.store.sends.count,   label: "Total Sends",  color: .green)
+            summaryCard(value: vm.store.history.count, label: "Total Climbs", color: .dcSecondary)
+            summaryCard(value: vm.store.sends.count,   label: "Total Sends",  color: .dcPrimary)
             summaryCard(value: vm.store.history.filter(\.isFavorite).count, label: "Favorites", color: .yellow)
         }
     }
@@ -108,7 +108,7 @@ struct StatsView: View {
                         x: .value("Count", item.count),
                         y: .value("Grade", item.grade)
                     )
-                    .foregroundStyle(item.isSent ? Color.green : Color.cyan.opacity(0.45))
+                    .foregroundStyle(item.isSent ? Color.dcPrimary : Color.dcSecondary.opacity(0.6))
                     .cornerRadius(4)
                     .annotation(position: .trailing, alignment: .leading) {
                         if item.isSent && item.count > 0 {
@@ -132,8 +132,8 @@ struct StatsView: View {
                 .frame(height: CGFloat(pyramidGrades.count) * 28 + 20)
 
                 HStack(spacing: 16) {
-                    legendDot(.green, label: "Sent")
-                    legendDot(.cyan.opacity(0.45), label: "Climbed")
+                    legendDot(.dcPrimary, label: "Sent")
+                    legendDot(.dcSecondary.opacity(0.6), label: "Climbed")
                 }
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -160,7 +160,7 @@ struct StatsView: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.indigo, .cyan],
+                            colors: [.dcSecondary, .dcAccent],
                             startPoint: .bottom,
                             endPoint: .top
                         )
