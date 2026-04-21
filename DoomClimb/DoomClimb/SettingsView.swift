@@ -20,6 +20,25 @@ struct SettingsView: View {
             List {
                 Section {
                     HStack {
+                        Spacer()
+                        VStack(spacing: 6) {
+                            Image(systemName: "figure.climbing")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.green)
+                            Text("DoomClimb")
+                                .font(.system(.title3, design: .rounded, weight: .bold))
+                            Text("Version \(appVersion)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 10)
+                    .listRowBackground(Color.clear)
+                }
+
+                Section {
+                    HStack {
                         Text("Total Climbs")
                         Spacer()
                         Text("\(store.history.count)")
@@ -65,13 +84,6 @@ struct SettingsView: View {
                 }
 
                 Section("About") {
-                    HStack {
-                        Text("Version")
-                        Spacer()
-                        Text(appVersion)
-                            .foregroundStyle(.secondary)
-                    }
-
                     NavigationLink("Privacy Policy") {
                         PrivacyPolicyView()
                     }

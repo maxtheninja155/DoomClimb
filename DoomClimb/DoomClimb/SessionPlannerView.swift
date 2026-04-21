@@ -109,9 +109,6 @@ struct SessionPlannerView: View {
                 .navigationTitle(vm.session.isEmpty ? "Session Planner" : "Your Session")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Done") { dismiss() }
-                    }
                     if !vm.session.isEmpty {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("New", role: .destructive) {
@@ -239,8 +236,11 @@ struct SessionPlannerView: View {
                 .tint(.green)
 
                 Button("Finish") {
-                    withAnimation { showCompletionSheet = false }
-                    dismiss()
+                    withAnimation {
+                        showCompletionSheet = false
+                        vm.clearSession()
+                        didCelebrateCurrentSession = false
+                    }
                 }
                 .font(.subheadline)
             }

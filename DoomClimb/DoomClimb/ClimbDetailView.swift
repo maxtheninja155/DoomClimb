@@ -38,6 +38,12 @@ struct ClimbDetailView: View {
         vm.store.history.first(where: { $0.id == climbId })
     }
 
+    private var navigationTitle: String {
+        if isEditing { return "Editing" }
+        if let c = climb { return vm.store.displayName(for: c) }
+        return "Climb"
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -125,7 +131,7 @@ struct ClimbDetailView: View {
             }
             .padding()
         }
-        .navigationTitle(isEditing ? "Editing Climb" : "Climb")
+        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if startInEditMode && !didApplyStartInEditMode {

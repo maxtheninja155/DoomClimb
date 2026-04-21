@@ -3,7 +3,6 @@ import Charts
 
 struct StatsView: View {
     @ObservedObject var vm: RouteViewModel
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -18,11 +17,6 @@ struct StatsView: View {
             }
             .navigationTitle("Stats")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
         }
     }
 
@@ -51,7 +45,7 @@ struct StatsView: View {
                 .font(.title2)
                 .foregroundStyle(color)
             Text("\(value)")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .font(.system(size: 48, weight: .heavy, design: .rounded))
                 .foregroundStyle(color)
                 .monospacedDigit()
             Text(value == 1 ? "day" : "days")
@@ -63,7 +57,7 @@ struct StatsView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.vertical, 20)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
@@ -80,7 +74,7 @@ struct StatsView: View {
     private func summaryCard(value: Int, label: String, color: Color) -> some View {
         VStack(spacing: 4) {
             Text("\(value)")
-                .font(.system(.title2, design: .rounded, weight: .bold))
+                .font(.system(.title, design: .rounded, weight: .bold))
                 .foregroundStyle(color)
                 .monospacedDigit()
             Text(label)
@@ -89,7 +83,7 @@ struct StatsView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
 
