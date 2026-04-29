@@ -48,7 +48,7 @@ struct OnboardingView: View {
                         withAnimation { currentPage += 1 }
                     } label: {
                         Text("Next")
-                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .font(.system(.body, design: .rounded, weight: .bold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                     }
@@ -65,7 +65,7 @@ struct OnboardingView: View {
                         hasSeenOnboarding = true
                     } label: {
                         Text("Get Started")
-                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .font(.system(.body, design: .rounded, weight: .bold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                     }
@@ -90,27 +90,37 @@ private struct OnboardingPageView: View {
     let page: OnboardingPage
 
     var body: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 32) {
             Spacer()
 
             ZStack {
                 Circle()
-                    .fill(page.iconColor.opacity(0.12))
-                    .frame(width: 120, height: 120)
+                    .fill(page.iconColor.opacity(0.07))
+                    .frame(width: 160, height: 160)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [page.iconColor.opacity(0.28), page.iconColor.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 116, height: 116)
                 Image(systemName: page.icon)
-                    .font(.system(size: 52))
+                    .font(.system(size: 56))
                     .foregroundStyle(page.iconColor)
             }
 
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 Text(page.title)
-                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .font(.system(.largeTitle, design: .rounded, weight: .heavy))
                     .multilineTextAlignment(.center)
 
                 Text(page.subtitle)
-                    .font(.body)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .lineSpacing(2)
                     .padding(.horizontal, 8)
             }
 

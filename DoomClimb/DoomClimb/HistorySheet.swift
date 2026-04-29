@@ -15,7 +15,6 @@ enum HistoryFilter: String, CaseIterable, Identifiable {
 
 struct HistorySheet: View {
     @ObservedObject var vm: RouteViewModel
-    @Environment(\.dismiss) private var dismiss
     @State private var filter: HistoryFilter = .all
 
     var body: some View {
@@ -30,9 +29,6 @@ struct HistorySheet: View {
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Done") { dismiss() }
-                }
                 ToolbarItem(placement: .principal) {
                     Picker("Filter", selection: $filter) {
                         ForEach(HistoryFilter.allCases) { f in
@@ -163,7 +159,7 @@ private struct HistoryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Simple colored marker indicating grade
+            // Grade marker
             Circle()
                 .fill(Color.green.opacity(0.15))
                 .overlay(
@@ -171,7 +167,7 @@ private struct HistoryRow: View {
                         .font(.system(.caption, design: .rounded, weight: .bold))
                         .foregroundStyle(.green)
                 )
-                .frame(width: 36, height: 36)
+                .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -193,17 +189,15 @@ private struct HistoryRow: View {
                     }
                 }
 
-                HStack(spacing: 6) {
-                    Text(climb.route.grade)
-                    Text("•")
+                HStack(spacing: 4) {
                     Text("\(climb.route.angle)°")
-                    Text("•")
+                    Text("·")
                     Text("\(climb.route.moveCount) moves")
                     if climb.attempts > 0 {
-                        Text("•")
+                        Text("·")
                         Text("\(climb.attempts) att")
                     }
-                    Text("•")
+                    Text("·")
                     Text(timeString(climb.savedAt))
                 }
                 .font(.caption2)

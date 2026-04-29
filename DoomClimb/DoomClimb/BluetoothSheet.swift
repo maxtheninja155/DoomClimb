@@ -14,15 +14,19 @@ struct BluetoothSheet: View {
             List {
                 // MARK: - Status
                 Section {
-                    HStack {
+                    VStack(spacing: 10) {
                         statusIcon
+                            .font(.system(size: 36))
                         Text(ble.state.displayText)
-                            .font(.headline)
-                        Spacer()
+                            .font(.system(.title3, design: .rounded, weight: .semibold))
                         if case .scanning = ble.state {
                             ProgressView()
+                                .tint(.blue)
                         }
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .listRowBackground(Color.clear)
                 }
 
                 // MARK: - Board Size Picker
